@@ -63,7 +63,11 @@ impl Policy {
 // Expects lines like "2-4 n: npct".
 fn parse_line(line: &str) -> (Policy, String) {
     let mut parts = line.split(": ");
-    let policy: Policy = parts.next().expect("no policy!").parse().expect("bad policy!");
+    let policy: Policy = parts
+        .next()
+        .expect("no policy!")
+        .parse()
+        .expect("bad policy!");
     let password = parts.next().expect("no password!");
     (policy, password.to_owned())
 }
