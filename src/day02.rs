@@ -24,10 +24,10 @@ impl FromStr for Policy {
 
     // Expects input like "3-7 x".
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut words = s.split(" ");
+        let mut words = s.split(' ');
 
         let bounds = words.next().ok_or(ParsePolicyError)?;
-        let mut counts = bounds.split("-");
+        let mut counts = bounds.split('-');
         let min: usize = counts.next().ok_or(ParsePolicyError)?.parse()?;
         let max: usize = counts.next().ok_or(ParsePolicyError)?.parse()?;
 

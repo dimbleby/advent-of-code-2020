@@ -40,6 +40,7 @@ pub(crate) fn day03() {
     println!("Part two answer is {}", part2);
 }
 
+#[allow(clippy::ptr_arg)]
 fn count_trees_on_slope(map: &Map, right: usize, down: usize) -> u32 {
     let mut tree_count = 0;
 
