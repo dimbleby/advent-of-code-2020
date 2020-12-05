@@ -1,12 +1,7 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-
 pub(crate) fn day01() {
-    let input = File::open("data/day01.txt").expect("Failed to open input");
-    let buffered = BufReader::new(input);
-    let mut expenses: Vec<u32> = buffered
+    let input = std::fs::read_to_string("data/day01.txt").unwrap();
+    let mut expenses: Vec<u32> = input
         .lines()
-        .map(|line| line.unwrap())
         .map(|line| line.parse::<u32>().unwrap())
         .collect();
     expenses.sort_unstable();

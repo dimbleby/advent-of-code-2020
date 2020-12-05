@@ -1,7 +1,3 @@
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
-
 #[derive(Copy, Clone, Debug, Hash, PartialEq, Eq)]
 enum Tile {
     Tree,
@@ -22,11 +18,10 @@ type Row = Vec<Tile>;
 type Map = Vec<Row>;
 
 pub(crate) fn day03() {
-    let input = File::open("data/day03.txt").expect("Failed to open input");
-    let buffered = BufReader::new(input);
-    let map: Map = buffered
+    let input = std::fs::read_to_string("data/day03.txt").unwrap();
+    let map: Map = input
         .lines()
-        .map(|line| line.unwrap().chars().map(Tile::from).collect())
+        .map(|line| line.chars().map(Tile::from).collect())
         .collect();
 
     let part1 = count_trees_on_slope(&map, 3, 1);

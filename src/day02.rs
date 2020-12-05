@@ -1,5 +1,3 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 
 struct Policy {
@@ -73,13 +71,8 @@ fn parse_line(line: &str) -> (Policy, String) {
 }
 
 pub(crate) fn day02() {
-    let input = File::open("data/day02.txt").expect("Failed to open input");
-    let buffered = BufReader::new(input);
-    let tries: Vec<(Policy, String)> = buffered
-        .lines()
-        .map(|line| line.unwrap())
-        .map(|line| parse_line(&line))
-        .collect();
+    let input = std::fs::read_to_string("data/day02.txt").unwrap();
+    let tries: Vec<(Policy, String)> = input.lines().map(|line| parse_line(&line)).collect();
 
     let valid_count = tries
         .iter()

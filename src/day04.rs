@@ -1,8 +1,5 @@
 use regex::Regex;
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::BufRead;
-use std::io::BufReader;
 
 #[derive(Default)]
 struct Passport {
@@ -74,13 +71,11 @@ impl Passport {
 }
 
 pub(crate) fn day04() {
-    let input = File::open("data/day04.txt").expect("Failed to open input");
-    let buffered = BufReader::new(input);
-    let lines = buffered.lines().map(|line| line.unwrap());
+    let input = std::fs::read_to_string("data/day04.txt").unwrap();
 
     let mut passports: Vec<Passport> = vec![];
     let mut passport = Passport::default();
-    for line in lines {
+    for line in input.lines() {
         if line.is_empty() {
             passports.push(passport);
             passport = Passport::default();
