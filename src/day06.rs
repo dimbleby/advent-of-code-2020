@@ -64,5 +64,5 @@ pub(crate) fn day06() {
     println!("Part one answer is {}", any_yes_count);
 
     let all_yes_count: usize = groups.iter().map(|group| group.all_yes_count()).sum();
-    println!("Part one answer is {}", all_yes_count);
+    println!("Part two answer is {}", all_yes_count);
 }
