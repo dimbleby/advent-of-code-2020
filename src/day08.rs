@@ -2,54 +2,30 @@ use std::collections::HashSet;
 use std::str::FromStr;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
-enum Operation {
-    Nop,
-    Acc,
-    Jmp,
+enum Instruction {
+    Nop(isize),
+    Acc(isize),
+    Jmp(isize),
 }
 
 #[derive(Debug)]
 struct ParseError;
-
-impl FromStr for Operation {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let op = match s {
-            "nop" => Self::Nop,
-            "acc" => Self::Acc,
-            "jmp" => Self::Jmp,
-            _ => return Err(ParseError),
-        };
-        Ok(op)
-    }
-}
-
-#[derive(Clone)]
-struct Instruction {
-    operation: Operation,
-    argument: isize,
-}
 
 impl FromStr for Instruction {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut words = s.split_whitespace();
-
-        let op: Operation = words
-            .next()
-            .and_then(|w| w.parse().ok())
-            .ok_or(ParseError)?;
-
+        let op = words.next().ok_or(ParseError)?;
         let arg: isize = words
             .next()
             .and_then(|w| w.parse().ok())
             .ok_or(ParseError)?;
-
-        let instruction = Self {
-            operation: op,
-            argument: arg,
+        let instruction = match op {
+            "nop" => Self::Nop(arg),
+            "acc" => Self::Acc(arg),
+            "jmp" => Self::Jmp(arg),
+            _ => return Err(ParseError),
         };
         Ok(instruction)
     }
@@ -75,15 +51,15 @@ impl Computer {
         self.instruction_pointer = 0;
     }
 
-    fn corrupt(&mut self, position: usize) -> bool {
-        let instruction = &mut self.instructions[position];
-        match instruction.operation {
-            Operation::Nop => {
-                instruction.operation = Operation::Jmp;
+    fn toggle_at_ip(&mut self) -> bool {
+        let position = self.instruction_pointer;
+        match self.instructions[position] {
+            Instruction::Nop(arg) => {
+                self.instructions[position] = Instruction::Jmp(arg);
                 true
             }
-            Operation::Jmp => {
-                instruction.operation = Operation::Nop;
+            Instruction::Jmp(arg) => {
+                self.instructions[position] = Instruction::Nop(arg);
                 true
             }
             _ => false,
@@ -92,16 +68,15 @@ impl Computer {
 
     fn step(&mut self) {
         let instruction = &self.instructions[self.instruction_pointer];
-        match instruction.operation {
-            Operation::Nop => self.instruction_pointer += 1,
-            Operation::Acc => {
-                self.accumulator += instruction.argument;
+        match instruction {
+            Instruction::Nop(_) => self.instruction_pointer += 1,
+            Instruction::Acc(arg) => {
+                self.accumulator += arg;
                 self.instruction_pointer += 1;
             }
-            Operation::Jmp => {
+            Instruction::Jmp(arg) => {
                 // yuk
-                self.instruction_pointer =
-                    (self.instruction_pointer as isize + instruction.argument) as usize
+                self.instruction_pointer = (self.instruction_pointer as isize + arg) as usize
             }
         }
     }
@@ -128,8 +103,8 @@ impl Computer {
                 // Found a loop, we've taken a wrong path, back up.
                 self.accumulator = reset_acc;
                 self.instruction_pointer = corrupt_ip.take().unwrap();
-                self.corrupt(self.instruction_pointer);
-            } else if corrupt_ip.is_none() && self.corrupt(self.instruction_pointer) {
+                self.toggle_at_ip();
+            } else if corrupt_ip.is_none() && self.toggle_at_ip() {
                 // Found a new path to try.
                 corrupt_ip = Some(self.instruction_pointer);
                 reset_acc = self.accumulator;
