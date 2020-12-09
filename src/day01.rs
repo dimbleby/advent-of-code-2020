@@ -1,8 +1,10 @@
+use crate::utils::find_pair_summing_to;
+
 pub(crate) fn day01() {
     let input = std::fs::read_to_string("data/day01.txt").unwrap();
-    let mut expenses: Vec<u32> = input
+    let mut expenses: Vec<u64> = input
         .lines()
-        .map(|line| line.parse::<u32>().unwrap())
+        .map(|line| line.parse::<u64>().unwrap())
         .collect();
     expenses.sort_unstable();
 
@@ -19,20 +21,4 @@ pub(crate) fn day01() {
             break;
         }
     }
-}
-
-// Input expenses must be sorted.
-fn find_pair_summing_to(target: u32, expenses: &[u32]) -> Option<(u32, u32)> {
-    let mut lower = 0;
-    let mut upper = expenses.len() - 1;
-    while lower < upper {
-        let expense1 = expenses[lower];
-        let expense2 = expenses[upper];
-        match expense1 + expense2 {
-            total if total == target => return Some((expense1, expense2)),
-            total if total < target => lower += 1,
-            _ => upper -= 1,
-        }
-    }
-    None
 }
