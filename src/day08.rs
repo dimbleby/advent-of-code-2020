@@ -106,18 +106,37 @@ impl Computer {
         }
     }
 
-    fn run_to_completion(&mut self) -> bool {
-        let program_length = self.instructions.len();
+    fn run_to_repeat_point(&mut self) -> isize {
         let mut visited: HashSet<usize> = HashSet::new();
         while visited.insert(self.instruction_pointer) {
-            // Apparently the instruction pointer never goes negative, or further out of bounds.
-            if self.instruction_pointer == program_length {
-                return true;
+            self.step();
+        }
+        self.accumulator
+    }
+
+    fn fix_and_terminate(&mut self) -> isize {
+        let mut corrupt_ip: Option<usize> = None;
+        let mut reset_acc = 0;
+
+        let program_length = self.instructions.len();
+        let mut visited: HashSet<usize> = HashSet::new();
+
+        // We'll execute each instruction at most twice: once on the original program and once on a
+        // version where we've fixed a single operation.
+        while self.instruction_pointer != program_length {
+            if !visited.insert(self.instruction_pointer) && corrupt_ip.is_some() {
+                // Found a loop, we've taken a wrong path, back up.
+                self.accumulator = reset_acc;
+                self.instruction_pointer = corrupt_ip.take().unwrap();
+                self.corrupt(self.instruction_pointer);
+            } else if corrupt_ip.is_none() && self.corrupt(self.instruction_pointer) {
+                // Found a new path to try.
+                corrupt_ip = Some(self.instruction_pointer);
+                reset_acc = self.accumulator;
             }
             self.step();
         }
-
-        false
+        self.accumulator
     }
 }
 
@@ -126,20 +145,10 @@ pub(crate) fn day08() {
     let instructions: Vec<Instruction> = input.lines().map(|line| line.parse().unwrap()).collect();
 
     let mut computer = Computer::new(instructions);
-    let terminates = computer.run_to_completion();
-    assert!(!terminates);
-    println!("Part one answer is {}", computer.accumulator);
+    let accumulator = computer.run_to_repeat_point();
+    println!("Part one answer is {}", accumulator);
 
-    for index in 0..computer.instructions.len() {
-        if computer.corrupt(index) {
-            computer.reset();
-            if computer.run_to_completion() {
-                println!("Part two answer is {}", computer.accumulator);
-                break;
-            }
-
-            // Undo the damage.
-            computer.corrupt(index);
-        }
-    }
+    computer.reset();
+    let accumulator = computer.fix_and_terminate();
+    println!("Part two answer is {}", accumulator);
 }
