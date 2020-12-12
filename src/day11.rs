@@ -1,5 +1,7 @@
+use std::convert::TryInto;
 use std::fmt;
 use std::fmt::Display;
+use std::iter::successors;
 
 const DIRECTIONS: &[(isize, isize)] = &[
     (-1, -1),
@@ -27,6 +29,13 @@ impl Tile {
             Self::Seat(occupied) => *occupied,
         }
     }
+
+    fn is_seat(&self) -> bool {
+        match self {
+            Self::Floor => false,
+            Self::Seat(_) => true,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -50,6 +59,20 @@ impl Display for Tile {
             Self::Seat(false) => write!(f, "L"),
             Self::Seat(true) => write!(f, "#"),
         }
+    }
+}
+
+fn neighbour(
+    (row, col): (usize, usize),
+    (dr, dc): (isize, isize),
+    (max_row, max_col): (usize, usize),
+) -> Option<(usize, usize)> {
+    let new_row: usize = (row as isize + dr).try_into().ok()?;
+    let new_col: usize = (col as isize + dc).try_into().ok()?;
+    if new_row < max_row && new_col < max_col {
+        Some((new_row, new_col))
+    } else {
+        None
     }
 }
 
@@ -82,87 +105,58 @@ impl Layout {
         }
     }
 
-    fn occupied_neighbours(&self, row: usize, col: usize) -> u8 {
-        let mut count = 0;
-        if row > 0 && col > 0 && self.tiles[row - 1][col - 1].occupied() {
-            count += 1;
-        }
-        if row > 0 && self.tiles[row - 1][col].occupied() {
-            count += 1;
-        }
-        if row > 0 && col + 1 < self.columns && self.tiles[row - 1][col + 1].occupied() {
-            count += 1;
-        }
-        if col > 0 && self.tiles[row][col - 1].occupied() {
-            count += 1;
-        }
-        if col + 1 < self.columns && self.tiles[row][col + 1].occupied() {
-            count += 1;
-        }
-        if row + 1 < self.rows && col > 0 && self.tiles[row + 1][col - 1].occupied() {
-            count += 1;
-        }
-        if row + 1 < self.rows && self.tiles[row + 1][col].occupied() {
-            count += 1;
-        }
-        if row + 1 < self.rows && col + 1 < self.columns && self.tiles[row + 1][col + 1].occupied()
-        {
-            count += 1;
-        }
-        count
+    fn occupied_neighbours(&self, row: usize, col: usize) -> usize {
+        let bounds = (self.rows, self.columns);
+        DIRECTIONS
+            .iter()
+            .filter_map(|&step| neighbour((row, col), step, bounds))
+            .filter(|&(r, c)| self.tiles[r][c].occupied())
+            .count()
     }
 
-    fn sees_occupied_seat(&self, row: usize, col: usize, direction: &(isize, isize)) -> bool {
-        let (mut r, mut c) = (row, col);
-        loop {
-            if r == 0 && direction.0 < 0 {
-                break;
-            }
-            if r + 1 == self.rows && direction.0 > 0 {
-                break;
-            }
-            if c == 0 && direction.1 < 0 {
-                break;
-            }
-            if c + 1 == self.columns && direction.1 > 0 {
-                break;
-            }
-            r = (r as isize + direction.0) as usize;
-            c = (c as isize + direction.1) as usize;
-            if let Tile::Seat(occupied) = self.tiles[r][c] {
-                return occupied;
-            }
-        }
-        false
+    fn line(
+        &self,
+        start: (usize, usize),
+        step: (isize, isize),
+    ) -> impl Iterator<Item = (usize, usize)> {
+        let bounds = (self.rows, self.columns);
+        successors(Some(start), move |&s| neighbour(s, step, bounds)).skip(1)
     }
 
     fn occupied_visible(&self, row: usize, col: usize) -> usize {
         DIRECTIONS
             .iter()
-            .filter(|&d| self.sees_occupied_seat(row, col, d))
+            .filter(|&&step| {
+                self.line((row, col), step)
+                    .find(|&(r, c)| self.tiles[r][c].is_seat())
+                    .map(|(r, c)| self.tiles[r][c].occupied())
+                    .unwrap_or(false)
+            })
             .count()
     }
 
     fn step(&mut self) -> bool {
         let mut changed = false;
         let mut new_tiles: Vec<Vec<Tile>> = self.tiles.clone();
-        for row in 0..self.rows {
-            for col in 0..self.columns {
+        for (row, new_row) in new_tiles.iter_mut().enumerate() {
+            for (col, new_tile) in new_row.iter_mut().enumerate() {
+                if !self.tiles[row][col].is_seat() {
+                    continue;
+                }
                 let occupied_neighbours = self.occupied_neighbours(row, col);
-                match self.tiles[row][col] {
-                    Tile::Seat(false) => {
-                        if occupied_neighbours == 0 {
-                            new_tiles[row][col] = Tile::Seat(true);
-                            changed = true;
-                        }
-                    }
-                    Tile::Seat(true) => {
+                match self.tiles[row][col].occupied() {
+                    true => {
                         if occupied_neighbours >= 4 {
-                            new_tiles[row][col] = Tile::Seat(false);
+                            *new_tile = Tile::Seat(false);
                             changed = true;
                         }
                     }
-                    Tile::Floor => {}
+                    false => {
+                        if occupied_neighbours == 0 {
+                            *new_tile = Tile::Seat(true);
+                            changed = true;
+                        }
+                    }
                 }
             }
         }
@@ -173,23 +167,25 @@ impl Layout {
     fn step2(&mut self) -> bool {
         let mut changed = false;
         let mut new_tiles: Vec<Vec<Tile>> = self.tiles.clone();
-        for row in 0..self.rows {
-            for col in 0..self.columns {
+        for (row, new_row) in new_tiles.iter_mut().enumerate() {
+            for (col, new_tile) in new_row.iter_mut().enumerate() {
+                if !self.tiles[row][col].is_seat() {
+                    continue;
+                }
                 let occupied_visible = self.occupied_visible(row, col);
-                match self.tiles[row][col] {
-                    Tile::Seat(false) => {
-                        if occupied_visible == 0 {
-                            new_tiles[row][col] = Tile::Seat(true);
-                            changed = true;
-                        }
-                    }
-                    Tile::Seat(true) => {
+                match self.tiles[row][col].occupied() {
+                    true => {
                         if occupied_visible >= 5 {
-                            new_tiles[row][col] = Tile::Seat(false);
+                            *new_tile = Tile::Seat(false);
                             changed = true;
                         }
                     }
-                    Tile::Floor => {}
+                    false => {
+                        if occupied_visible == 0 {
+                            *new_tile = Tile::Seat(true);
+                            changed = true;
+                        }
+                    }
                 }
             }
         }
