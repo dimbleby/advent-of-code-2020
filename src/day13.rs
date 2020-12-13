@@ -55,6 +55,14 @@ pub(crate) fn day13() {
         .collect();
 
     // Accumulator is the solution so far, and combined modulus so far.
+    //
+    // If we didn't have all the machinery lying around from last year, this simple thing would
+    // work - and the numbers that we're working with are small enough that it's not even slow.
+    //
+    //  let (solution, _) = congruences.iter().fold((0, 1u64), |(soln, bigm), (a, m)| {
+    //      let soln = (soln..).step_by(bigm as usize).find(|n| n % m == *a).unwrap();
+    //      (soln, bigm * m)
+    //  });
     let (solution, _) = congruences.iter().fold((0, 1), |(soln, bigm), (a, m)| {
         let bigmi = modular_inverse(*m, bigm);
         let need = (m + a - (soln % m)) % m;
