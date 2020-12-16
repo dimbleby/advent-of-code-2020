@@ -71,5 +71,8 @@ pub(crate) fn day15() {
     let input = vec![9, 6, 0, 10, 18, 2, 1];
     let game = Game::new(input);
     println!("Part one answer is {}", game.iter().nth(2019).unwrap());
-    println!("Part two answer is {}", game.iter().nth(29_999_999).unwrap());
+    println!(
+        "Part two answer is {}",
+        game.iter().nth(29_999_999).unwrap()
+    );
 }
