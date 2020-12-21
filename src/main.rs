@@ -21,6 +21,7 @@ mod day17;
 mod day18;
 mod day19;
 mod day20;
+mod day21;
 mod utils;
 
 #[derive(StructOpt)]
@@ -51,6 +52,7 @@ fn main() {
         18 => day18::day18(),
         19 => day19::day19(),
         20 => day20::day20(),
+        21 => day21::day21(),
         _ => println!("Unimplemented day: {}", args.day),
     }
 }
